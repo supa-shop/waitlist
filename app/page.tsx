@@ -52,6 +52,7 @@ export default function WaitlistPage() {
 	const [isSubmitted, setIsSubmitted] = useState(false);
 	const [waitlistCount, setWaitlistCount] = useState(1247); // Mock count
 	const [isLoading, setIsLoading] = useState(false);
+	const [loading, setLoading] = useState(true);
 	const { toast } = useToast();
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -83,6 +84,23 @@ export default function WaitlistPage() {
 			});
 		} catch (error) {
 			// Error case
+			if (
+				typeof error === "object" &&
+				error !== null &&
+				"response" in error &&
+				typeof (error as any).response === "object" &&
+				(error as any).response !== null &&
+				"status" in (error as any).response &&
+				(error as any).response.status === 409
+			) {
+				toast({
+					title: "Already on the waitlist",
+					description:
+						"This email is already registered. Please use a different email.",
+					variant: "destructive",
+				});
+				return;
+			}
 			toast({
 				title: "Something went wrong",
 				description: "Failed to join the waitlist. Please try again later.",
@@ -96,12 +114,15 @@ export default function WaitlistPage() {
 	useEffect(() => {
 		(async () => {
 			try {
+				setLoading(true);
 				// Fetch the current waitlist count from the API
 				const response = await axios.get("/waitlist/count");
 				console.log(response.data.data.count);
 				setWaitlistCount((prev) => prev + response.data.data.count);
 			} catch (error) {
 				console.error("Failed to fetch waitlist count:", error);
+			} finally {
+				setLoading(false);
 			}
 		})();
 	}, []);
@@ -148,7 +169,7 @@ export default function WaitlistPage() {
 								<Users className="h-5 w-5 text-[#ff7900]" />
 								<span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
 									<span className="text-[#ff7900] text-2xl font-bold">
-										{waitlistCount.toLocaleString()}
+										{loading ? "..." : waitlistCount.toLocaleString()}
 									</span>{" "}
 									people already joined
 								</span>
